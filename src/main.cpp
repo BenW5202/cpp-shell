@@ -20,10 +20,15 @@ int main() {
   while (true){ 
     std::cout << "$ ";
     std::string input;
-    std::cin >> input;
+    
+    if (!std::getline(std::cin, input)) {
+      break;
+    }
 
     if (input == "exit") {
       break;
+    } else if (input.substr(0,5) == "echo ") {
+      std::cout << input.substr(5) << "\n";
     } else {
       std::cout << input << ": command not found" << std::endl;
     }
