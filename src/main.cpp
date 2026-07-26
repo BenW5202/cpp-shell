@@ -4,11 +4,7 @@
 #include <sstream>
 // REMINDER: codecrafters submit to test code
 
-//if codecrafters keyword doesnt work
 
-/*
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-*/
 
 
 int main() {
