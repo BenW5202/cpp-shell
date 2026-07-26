@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
-
+#include <unordered_set>
+#include <sstream>
 // REMINDER: codecrafters submit to test code
 
 //if codecrafters keyword doesnt work
@@ -17,6 +18,8 @@ int main() {
 
   // TODO: Uncomment the code below to pass the first stage
   
+  std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type"};
+
   while (true){ 
     std::cout << "$ ";
     std::string input;
@@ -25,12 +28,25 @@ int main() {
       break;
     }
 
-    if (input == "exit") {
+    std::stringstream ss(input);
+    std::string command;
+    ss >> command;
+
+    if (command == "exit") {
       break;
-    } else if (input.substr(0,5) == "echo ") {
+    } else if (command == "type") {
+      std::string arg;
+      if (ss >> arg) {
+        if (builtInCommands.find(arg) != builtInCommands.end()) {
+          std::cout << arg << " is a shell builtin\n";
+        } else {
+          std::cout << arg << ": not found\n";
+        }
+      }
+    } else if (command == "echo ") {
       std::cout << input.substr(5) << "\n";
     } else {
-      std::cout << input << ": command not found" << std::endl;
+      std::cout << input << ": command not found" << "\n";
     }
     
   }
