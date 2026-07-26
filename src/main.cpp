@@ -43,8 +43,12 @@ int main() {
           std::cout << arg << ": not found\n";
         }
       }
-    } else if (command == "echo ") {
-      std::cout << input.substr(5) << "\n";
+    } else if (command == "echo") {
+      std::string args = "";
+      if (input.length() > 5) {
+        args = input.substr(5);
+      }
+      std::cout << args << "\n";
     } else {
       std::cout << input << ": command not found" << "\n";
     }
