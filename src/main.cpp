@@ -5,6 +5,7 @@
 #include <sstream>
 #include <filesystem>
 #include <cstdlib>
+#include <unistd.h>
 
 
 #ifdef _WIN32
@@ -58,49 +59,80 @@ std::string findExecutablePath(const std::string& command) {
   return findExecutablePath(command, splitPath(getPathEnv()));
 }
 
+bool getData(std::string& command, std::vector<std::string>& args) {
+  std::cout << "$ ";
+  std::string input;
+    
+  if (!std::getline(std::cin, input)) {
+    return false;
+  }
+
+  std::stringstream ss(input);
+  ss >> command;
+
+  std::string temp;
+  args.clear();
+  while (ss >> temp) {
+    args.push_back(temp);
+  }
+
+  return true;
+}
+
+void handleType(const std::vector<std::string>& args){
+  if (!args.empty()) {
+    if (builtInCommands.contains(args[0])) {
+      std::cout << args[0] << " is a shell builtin\n";
+    } else if (std::string path = findExecutablePath(args[0]); !path.empty()) {
+      std::cout << args[0] << " is " << path << "\n";
+    } else {
+      std::cout << args[0] << ": not found\n";
+    }
+  }
+}
+
+void handleEcho(const std::vector<std::string>& args){
+
+  std::string output = "";
+
+  for (size_t i = 0; i < args.size(); ++i){
+    output += args[i];
+    if (i < args.size() - 1){
+      output += " ";
+    }
+  }
+}
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
   while (true){ 
-    std::cout << "$ ";
-    std::string input;
-    
-    if (!std::getline(std::cin, input)) {
+    std::string command;
+    std::vector<std::string> args;
+
+    if (!getData(command, args)){
       break;
     }
-
-    std::stringstream ss(input);
-    std::string command;
-    ss >> command;
-
     if (command.empty()) {
       continue;
     }
     if (command == "exit") {
       break;
     } else if (command == "type") {
-      std::string arg;
-      if (ss >> arg) {
-        if (builtInCommands.contains(arg)) {
-          std::cout << arg << " is a shell builtin\n";
-        } else if (std::string path = findExecutablePath(arg); !path.empty()) {
-          std::cout << arg << " is " << path << "\n";
-        } else {
-          std::cout << arg << ": not found\n";
-        }
-      }
+      handleType(args);
     } else if (command == "echo") {
-      std::string args = "";
-      if (input.length() > 5) {
-        args = input.substr(5);
+      handleEcho(args);
+    } else if (!(builtInCommands.contains(command))){
+      if(std::string path = findExecutablePath(command); !path.empty()){
+        //Execute the program
+        break;
+        }
+      } else {
+        std::cout << command << ": command not found" << "\n";
       }
-      std::cout << args << "\n";
-    } else {
-      std::cout << input << ": command not found" << "\n";
-    }
-    
   }
-
 }
+
+  
+
