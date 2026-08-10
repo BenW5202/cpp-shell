@@ -118,12 +118,10 @@ bool getData(std::string& command, std::vector<std::string>& args) {
   return true;
 }
 
-bool isBuiltIn(std::string s) {
-  inline static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type"};
+bool isBuiltIn(const std::string& s) {
+  static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type"};
 
-  if (builtInCommands.contains(s)) {return true;}
-  
-  return false;
+  return builtInCommands.contains(s);
 }
 
 void handleType(const std::vector<std::string>& args){
