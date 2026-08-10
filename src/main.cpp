@@ -149,9 +149,9 @@ void handleEcho(const std::vector<std::string>& args){
   std::cout << output << "\n";
 }
 
-bool handleExternalProgram(const std::string& path, const std::vector<std::string>& args){
+bool handleExternalProgram(const std::string& command, const std::string& path, const std::vector<std::string>& args){
   std::vector<const char*> vecOfPtrs;
-  vecOfPtrs.push_back(path.c_str());
+  vecOfPtrs.push_back(command.c_str());
 
   for (const std::string& arg : args){
     vecOfPtrs.push_back(arg.c_str());
@@ -204,7 +204,7 @@ int main() {
     } else if (!(isBuiltIn(command))){
       if(std::string path = findExecutablePath(command); !path.empty()){
         //Execute the program
-        if (!handleExternalProgram(path, args)){
+        if (!handleExternalProgram(command, path, args)){
           std::cerr << "ERROR: Failed to execute the program";
         }
       } else {
