@@ -119,7 +119,7 @@ bool getData(std::string& command, std::vector<std::string>& args) {
 }
 
 bool isBuiltIn(const std::string& s) {
-  static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type"};
+  static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type", "cd"};
 
   return builtInCommands.contains(s);
 }
@@ -147,6 +147,22 @@ void handleEcho(const std::vector<std::string>& args){
     }
   }
   std::cout << output << "\n";
+}
+
+void handleCd(const std::vector<std::string>& args){
+
+  const char* path;
+
+  if (args.empty() or args[0] == "~"){
+    path = std::getenv("HOME");
+  } else {
+    path = args[0].c_str();
+  }
+
+  if (chdir(path) == -1){
+    std::cerr << "ERROR: no such file or directory with path " << path << "\n";
+  }
+  
 }
 
 bool handleExternalProgram(const std::string& command, const std::string& path, const std::vector<std::string>& args){
@@ -201,6 +217,8 @@ int main() {
       handleType(args);
     } else if (command == "echo") {
       handleEcho(args);
+    } else if (command == "cd") {
+      handleCd(args);
     } else if (!(isBuiltIn(command))){
       if(std::string path = findExecutablePath(command); !path.empty()){
         //Execute the program
