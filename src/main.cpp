@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <csignal>
 
 constexpr char PATH_LIST_SEPARATOR = ':';
 
@@ -181,6 +182,7 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
     std::cerr << "ERROR: fork failed\n";
     return false;
   } else if (pid == 0) { //child process
+    std::signal(SIGINT, SIG_DFL);
     execv(path.c_str(), const_cast<char**>(vecOfPtrs.data()));
     std::cerr << "ERROR: child process failed\n";
     _exit(1);
@@ -200,6 +202,9 @@ int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
+
+  //to prevent ctrl+c from terminating shell
+  std::signal(SIGINT, SIG_IGN); 
 
   while (true){ 
     std::string command;
