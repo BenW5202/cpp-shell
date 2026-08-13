@@ -61,10 +61,14 @@ std::string findExecutablePath(const std::string& command) {
   return findExecutablePath(command, splitPath(getPathEnv()));
 }
 
-bool getData(std::string& command, std::vector<std::string>& args) {
-  command = "";
-  args.clear();
+struct ParsedCommand {
+  std::string command;
+  std::vector<std::string> arguments;
+};
 
+bool getData(std::vector<ParsedCommand>& commands) {
+  
+  commands.clear();
   std::cout << "$ ";
   std::string input;
 
@@ -78,7 +82,6 @@ bool getData(std::string& command, std::vector<std::string>& args) {
   bool inDouble = false;
   bool isEscaped = false;
   bool tokenStarted = false;
-
 
   for (char c : input) {
       if (isEscaped) {
@@ -94,6 +97,19 @@ bool getData(std::string& command, std::vector<std::string>& args) {
       } else if (c == '"' and !(inSingle)){
           tokenStarted = true;
           inDouble = !(inDouble);
+      } else if (c == '|' and (!(inSingle) and !(inDouble))){
+          if (tokenStarted) {
+            tokens.push_back(currentToken);
+            currentToken = "";
+            tokenStarted = false;
+          }
+          if (!tokens.empty()){
+            ParsedCommand commandBlock;
+            commandBlock.command = tokens[0];
+            commandBlock.arguments.assign(tokens.begin() + 1, tokens.end());
+            commands.push_back(commandBlock);
+            tokens.clear();  
+          }
       } else if (c == ' '){
           if (inSingle or inDouble){
             currentToken.push_back(c);
@@ -113,8 +129,10 @@ bool getData(std::string& command, std::vector<std::string>& args) {
       tokens.push_back(currentToken);
   }
   if (!(tokens.empty())){
-      command = tokens[0];
-      args.assign(tokens.begin() + 1, tokens.end());
+      ParsedCommand commandBlock;
+      commandBlock.command = tokens[0];
+      commandBlock.arguments.assign(tokens.begin() + 1, tokens.end());
+      commands.push_back(commandBlock);
   }
   return true;
 }
@@ -198,6 +216,10 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
   }
 }
 
+bool handlePipeline(std::vector<ParsedCommand> commands){
+  return true;
+}
+
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
@@ -207,36 +229,42 @@ int main() {
   std::signal(SIGINT, SIG_IGN); 
 
   while (true){ 
-    std::string command;
-    std::vector<std::string> args;
+    std::vector<ParsedCommand> commands;
 
-    if (!getData(command, args)){
+    if (!getData(commands)){
       break;
     }
-    if (command.empty()) {
+    if (commands.empty()) {
       continue;
     }
-    if (command == "exit") {
+    if (commands.size() == 1){
+      const ParsedCommand& cmd = commands[0];
+      std::string command = cmd.command;
+      std::vector<std::string> args = cmd.arguments;
+      if (command == "exit") {
       break;
-    } else if (command == "type") {
-      handleType(args);
-    } else if (command == "echo") {
-      handleEcho(args);
-    } else if (command == "cd") {
-      handleCd(args);
-    } else if (!(isBuiltIn(command))){
-      if(std::string path = findExecutablePath(command); !path.empty()){
-        //Execute the program
-        if (!handleExternalProgram(command, path, args)){
-          std::cerr << "ERROR: Failed to execute the program";
+      } else if (command == "type") {
+        handleType(args);
+      } else if (command == "echo") {
+        handleEcho(args);
+      } else if (command == "cd") {
+        handleCd(args);
+      } else if (!(isBuiltIn(command))){
+        if(std::string path = findExecutablePath(command); !path.empty()){
+          //Execute the program
+          if (!handleExternalProgram(command, path, args)){
+            std::cerr << "ERROR: Failed to execute the program" << "\n";
+          }
+        } else {
+          std::cout << command << ": command not found" << "\n";
         }
-      } else {
-        std::cout << command << ": command not found" << "\n";
       }
+    } else if (commands.size() > 1) {
+      //pipe logic
+      handlePipeline(commands);
     }
   }
 }
-
   
 
  
