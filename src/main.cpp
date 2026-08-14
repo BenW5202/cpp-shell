@@ -216,7 +216,86 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
   }
 }
 
-bool handlePipeline(std::vector<ParsedCommand> commands){
+bool handlePipeline(const std::vector<ParsedCommand>& commands){
+  
+  int prev_fd = -1;
+
+  for (size_t i = 0; i < commands.size(); ++i) {
+    int pipefd[2];
+    if (i != commands.size() - 1) {
+      pipe(pipefd);
+    }
+    pid_t pid = fork();
+
+    if (pid < 0) { 
+      std::cerr << "ERROR: fork failed\n";
+      return false;
+    } else if (pid == 0) {
+      if (prev_fd != -1) {
+        dup2(prev_fd, STDIN_FILENO);
+        close(prev_fd);
+      }
+
+      if (i != commands.size() - 1){
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+      }
+
+      std::signal(SIGINT, SIG_DFL);
+
+      
+      std::string command = commands[i].command;
+      std::vector<std::string> args = commands[i].arguments;
+
+      if (isBuiltIn(command)) {
+        if (command == "echo") {
+          handleEcho(args);
+        } else if (command == "type") {
+          handleType(args);
+        } else if (command == "cd") {
+          handleCd(args);
+        } else if (command == "exit") {
+          _exit(0);
+        }
+
+        _exit(0);
+      }
+      
+      std::string path = findExecutablePath(command);
+
+      if (path.empty()) {
+        std::cerr << command << ": command not found\n";
+        _exit(127);
+      }
+      
+
+      std::vector<const char*> vecOfPtrs;
+      vecOfPtrs.push_back(command.c_str());
+
+      for (const std::string& arg : args) {
+        vecOfPtrs.push_back(arg.c_str());
+      }
+
+      vecOfPtrs.push_back(nullptr);
+
+      execv(path.c_str(), const_cast<char**>(vecOfPtrs.data()));
+      std::cerr << "ERROR: child process failed\n";
+      _exit(1);
+
+    } else {
+      if (prev_fd != -1) {
+        close(prev_fd);
+      }
+      if (i != commands.size() - 1){
+        prev_fd = pipefd[0];
+        close(pipefd[1]);
+      }
+    }    
+  }
+  while (waitpid(-1, NULL, 0) > 0) {
+
+  }
   return true;
 }
 
