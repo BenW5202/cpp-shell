@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <csignal>
+#include <algorithm>
 
 constexpr char PATH_LIST_SEPARATOR = ':';
 
@@ -140,7 +141,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
 bool isBuiltIn(const std::string& s) {
   static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type", "cd"};
 
-  return builtInCommands.contains(s);
+  return std::find(builtInCommands.begin(), builtInCommands.end(), s) != builtInCommands.end();
 }
 
 void handleType(const std::vector<std::string>& args){
@@ -258,10 +259,9 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
         } else if (command == "exit") {
           _exit(0);
         }
-
         _exit(0);
       }
-      
+
       std::string path = findExecutablePath(command);
 
       if (path.empty()) {
