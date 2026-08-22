@@ -92,6 +92,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
     return false;
   }
 
+  //Tokenization
   std::vector<std::string> tokens;
   std::string currentToken;
   bool inSingle = false;
@@ -99,58 +100,77 @@ bool getData(std::vector<ParsedCommand>& commands) {
   bool isEscaped = false;
   bool tokenStarted = false;
 
-  for (char c : input) {
+  for (size_t i = 0; i < input.length(); ++i) {
+    char c = input[i];
       if (isEscaped) {
-          tokenStarted = true;
-          currentToken.push_back(c);
-          isEscaped = false;
+        tokenStarted = true;
+        currentToken.push_back(c);
+        isEscaped = false;
       } else if (c == '\\' and !(inSingle)){
-          tokenStarted = true;
-          isEscaped = true;
+        tokenStarted = true;
+        isEscaped = true;
       } else if (c == '\'' and !(inDouble)) {
-          tokenStarted = true;
-          inSingle = !(inSingle);
+        tokenStarted = true;
+        inSingle = !(inSingle);
       } else if (c == '"' and !(inSingle)){
-          tokenStarted = true;
-          inDouble = !(inDouble);
-      } else if (c == '|' and (!(inSingle) and !(inDouble))){
+        tokenStarted = true;
+        inDouble = !(inDouble);
+      } else if (!(inSingle) and !(inDouble)){
+        if (c == '&' && i + 1 < input.length() &&
+        input[i + 1] == '&'){
+          if (tokenStarted) {
+            tokens.push_back(currentToken);
+            tokenStarted = false;
+          }
+          tokens.push_back("&&");
+          i++;
+        } else if (c == '|' && i + 1 < input.length() &&
+        input[i + 1] == '|'){
+          if (tokenStarted) {
+            tokens.push_back(currentToken);
+            tokenStarted = false;
+          }
+          tokens.push_back("&&");
+          i++;
+        } else if (c == '>' && i + 1 < input.length() &&
+        input[i + 1] == '>'){
+          if (tokenStarted) {
+            tokens.push_back(currentToken);
+            tokenStarted = false;
+          }
+          tokens.push_back(">>");
+          i++;
+        }
+        //Single character operations
+        else if (c == '&' || c == '|' ||
+        c == '>' || c == '<') {
           if (tokenStarted) {
             tokens.push_back(currentToken);
             currentToken = "";
             tokenStarted = false;
           }
-          if (!tokens.empty()){
-            ParsedCommand commandBlock;
-            commandBlock.command = tokens[0];
-            commandBlock.arguments.assign(tokens.begin() + 1, tokens.end());
-            commands.push_back(commandBlock);
-            tokens.clear();  
+          tokens.push_back(std::string(1, c));
+        }
+        //Spaces
+        else if (c == ' ' || c == '\t') {
+          if (tokenStarted) {
+            tokens.push_back(currentToken);
+            currentToken = "";
+            tokenStarted = false;
           }
-      } else if (c == ' '){
-          if (inSingle or inDouble){
-            currentToken.push_back(c);
-          } else {
-            if(tokenStarted) {
-              tokens.push_back(currentToken);
-              currentToken = "";
-              tokenStarted = false;
-            } 
-          }
-      } else {
+        } else {
           tokenStarted = true;
           currentToken.push_back(c);
+        }
+      } else {
+        tokenStarted = true;
+        currentToken.push_back(c);
       }
-  }
-  if (tokenStarted){
+    }
+
+    if (tokenStarted) {
       tokens.push_back(currentToken);
-  }
-  if (!(tokens.empty())){
-      ParsedCommand commandBlock;
-      commandBlock.command = tokens[0];
-      commandBlock.arguments.assign(tokens.begin() + 1, tokens.end());
-      commands.push_back(commandBlock);
-  }
-  return true;
+    }
 }
 
 bool isBuiltIn(const std::string& s) {
