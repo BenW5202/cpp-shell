@@ -130,7 +130,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
             tokens.push_back(currentToken);
             tokenStarted = false;
           }
-          tokens.push_back("&&");
+          tokens.push_back("||");
           i++;
         } else if (c == '>' && i + 1 < input.length() &&
         input[i + 1] == '>'){
