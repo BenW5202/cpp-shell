@@ -120,6 +120,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
         input[i + 1] == '&'){
           if (tokenStarted) {
             tokens.push_back(currentToken);
+            currentToken = "";
             tokenStarted = false;
           }
           tokens.push_back("&&");
@@ -128,6 +129,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
         input[i + 1] == '|'){
           if (tokenStarted) {
             tokens.push_back(currentToken);
+            currentToken = "";
             tokenStarted = false;
           }
           tokens.push_back("||");
@@ -136,6 +138,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
         input[i + 1] == '>'){
           if (tokenStarted) {
             tokens.push_back(currentToken);
+            currentToken = "";
             tokenStarted = false;
           }
           tokens.push_back(">>");
