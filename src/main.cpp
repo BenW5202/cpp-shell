@@ -62,9 +62,24 @@ std::string findExecutablePath(const std::string& command) {
   return findExecutablePath(command, splitPath(getPathEnv()));
 }
 
+enum class Connector {
+  NONE,
+  PIPE, // |
+  AND, // &&
+  OR, // ||
+  BACKROUND // &
+};
+
 struct ParsedCommand {
   std::string command;
   std::vector<std::string> arguments;
+
+  Connector connector = Connector::NONE;
+
+  std::string inputFile = "";
+  std::string outputFile = "";
+  bool appendOutput = false; // true: '>>', false: '>'
+
 };
 
 bool getData(std::vector<ParsedCommand>& commands) {
@@ -74,7 +89,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
   std::string input;
 
   if (!std::getline(std::cin, input)) {
-  return false;
+    return false;
   }
 
   std::vector<std::string> tokens;
