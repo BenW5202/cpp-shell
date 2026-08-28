@@ -67,7 +67,7 @@ enum class Connector {
   PIPE, // |
   AND, // &&
   OR, // ||
-  BACKROUND // &
+  BACKGROUND // &
 };
 
 struct ParsedCommand {
@@ -171,9 +171,63 @@ bool getData(std::vector<ParsedCommand>& commands) {
       }
     }
 
-    if (tokenStarted) {
-      tokens.push_back(currentToken);
+  if (tokenStarted) {
+    tokens.push_back(currentToken);
+  }
+  
+  //Parsing
+  if (tokens.empty()) {return true;}
+
+  ParsedCommand currentCmd;
+
+  for (size_t i = 0; i < tokens.size(); ++i) {
+    const std::string& token = tokens[i];
+
+    if (token == "|") {
+      currentCmd.connector = Connector::PIPE;
+      commands.push_back(currentCmd);
+      currentCmd = ParsedCommand();
+    } else if (token == "&&") {
+      currentCmd.connector = Connector::AND;
+      commands.push_back(currentCmd);
+      currentCmd = ParsedCommand();
+    } else if (token == "||") {
+      currentCmd.connector = Connector::OR;
+      commands.push_back(currentCmd);
+      currentCmd = ParsedCommand();
+    } else if (token == "&") {
+      currentCmd.connector = Connector::BACKGROUND;
+      commands.push_back(currentCmd);
+      currentCmd = ParsedCommand();
+    } else if (token == ">") {
+      if (i + 1 < tokens.size()) {
+        currentCmd.outputFile = tokens[i + 1];
+        currentCmd.appendOutput = false;
+        i++;
+      }
+    } else if (token == ">>") {
+      if (i + 1 < tokens.size()) {
+        currentCmd.outputFile = tokens[i + 1];
+        currentCmd.appendOutput = true;
+        i++;
+      }
+    } else if (token == "<") {
+      if (i + 1 < tokens.size()) {
+        currentCmd.inputFile = tokens[i + 1];
+        i++;
+      }
+    } else {
+      if (currentCmd.command.empty()) {
+        currentCmd.command = token;
+      } else {
+        currentCmd.arguments.push_back(token);
+      }
     }
+  } 
+
+  if (!currentCmd.command.empty()) {
+    commands.push_back(currentCmd);
+  }
 }
 
 bool isBuiltIn(const std::string& s) {
