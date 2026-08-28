@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <csignal>
 #include <algorithm>
+#include <fcntl.h>
 
 constexpr char PATH_LIST_SEPARATOR = ':';
 
@@ -309,6 +310,28 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
   }
 }
 
+void applyRedirection(const ParsedCommand& cmd) {
+  if (!cmd.inputFile.empty()) {
+    int fd = open(cmd.inputFile.c_str(), O_RDONLY);
+    if (fd < 0) {
+      perror("Failed to open input file");
+      _exit(1);
+    }
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+  }
+
+  if (!cmd.outputFile.empty()) {
+    int flags = O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC);
+    int fd = open(cmd.outputFile.c_str(), flags, 0644);
+    if (fd < 0) {
+      perror("Failed to open output file");
+      _exit(1);
+    }
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+  }
+}
 bool handlePipeline(const std::vector<ParsedCommand>& commands){
   
   int prev_fd = -1;
