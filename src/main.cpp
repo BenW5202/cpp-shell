@@ -278,11 +278,33 @@ void handleCd(const std::vector<std::string>& args){
   
 }
 
-bool handleExternalProgram(const std::string& command, const std::string& path, const std::vector<std::string>& args){
-  std::vector<const char*> vecOfPtrs;
-  vecOfPtrs.push_back(command.c_str());
+void applyRedirection(const ParsedCommand& cmd) {
+  if (!cmd.inputFile.empty()) {
+    int fd = open(cmd.inputFile.c_str(), O_RDONLY);
+    if (fd < 0) {
+      perror("Failed to open input file");
+      _exit(1);
+    }
+    dup2(fd, STDIN_FILENO);
+    close(fd);
+  }
+  if (!cmd.outputFile.empty()) {
+    int flags = O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC);
+    int fd = open(cmd.outputFile.c_str(), flags, 0644);
+    if (fd < 0) {
+      perror("Failed to open output file");
+      _exit(1);
+    }
+    dup2(fd, STDOUT_FILENO);
+    close(fd);
+  }
+}
 
-  for (const std::string& arg : args){
+bool handleExternalProgram(const ParsedCommand& cmd, const std::string& path) {
+  std::vector<const char*> vecOfPtrs;
+
+  vecOfPtrs.push_back(cmd.command.c_str());
+  for (const std::string& arg : cmd.arguments){
     vecOfPtrs.push_back(arg.c_str());
   }
 
@@ -295,6 +317,7 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
     return false;
   } else if (pid == 0) { //child process
     std::signal(SIGINT, SIG_DFL);
+    applyRedirection(cmd);
     execv(path.c_str(), const_cast<char**>(vecOfPtrs.data()));
     std::cerr << "ERROR: child process failed\n";
     _exit(1);
@@ -310,28 +333,6 @@ bool handleExternalProgram(const std::string& command, const std::string& path, 
   }
 }
 
-void applyRedirection(const ParsedCommand& cmd) {
-  if (!cmd.inputFile.empty()) {
-    int fd = open(cmd.inputFile.c_str(), O_RDONLY);
-    if (fd < 0) {
-      perror("Failed to open input file");
-      _exit(1);
-    }
-    dup2(fd, STDIN_FILENO);
-    close(fd);
-  }
-
-  if (!cmd.outputFile.empty()) {
-    int flags = O_WRONLY | O_CREAT | (cmd.appendOutput ? O_APPEND : O_TRUNC);
-    int fd = open(cmd.outputFile.c_str(), flags, 0644);
-    if (fd < 0) {
-      perror("Failed to open output file");
-      _exit(1);
-    }
-    dup2(fd, STDOUT_FILENO);
-    close(fd);
-  }
-}
 bool handlePipeline(const std::vector<ParsedCommand>& commands){
   
   int prev_fd = -1;
@@ -358,6 +359,7 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
         close(pipefd[1]);
       }
 
+      applyRedirection(commands[i]);
       std::signal(SIGINT, SIG_DFL);
 
       
@@ -446,7 +448,7 @@ int main() {
       } else if (!(isBuiltIn(command))){
         if(std::string path = findExecutablePath(command); !path.empty()){
           //Execute the program
-          if (!handleExternalProgram(command, path, args)){
+          if (!handleExternalProgram(cmd, path)){
             std::cerr << "ERROR: Failed to execute the program" << "\n";
           }
         } else {
