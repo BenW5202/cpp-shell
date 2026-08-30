@@ -418,6 +418,43 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
   return true;
 }
 
+bool executeSignle(const ParsedCommand& cmd) {
+  if (cmd.command == "exit") {
+    exit(0);
+  }
+
+  if (isBuiltIn(cmd.command)) {
+    int saved_stdin = dup(STDIN_FILENO);
+    int saved_stdout = dup(STDOUT_FILENO);
+
+    bool success = false;
+    if (applyRedirection(cmd)) {
+      if (cmd.command == "type") {
+        handleType(cmd.arguments); 
+        success = true;
+      } else if (cmd.command == "echo") {
+        handleEcho(cmd.arguments);
+        success = true;
+      } else if (cmd.command == "cd") {
+        success = handleCd(cmd.arguments);
+      }
+    }
+
+    dup2(saved_stdin, STDIN_FILENO);
+    dup2(saved_stdout, STDOUT_FILENO);
+    close(saved_stdin);
+    close(saved_stdout);
+    return success;
+  }
+
+  std::string path = findExecutablePath(cmd.command);
+  if (!path.empty()) {
+    return handleExternalProgram(cmd, path);
+  } else {
+    std::cout << cmd.command << ": command not found\n";
+    return false; 
+  }
+}
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
