@@ -278,12 +278,12 @@ void handleCd(const std::vector<std::string>& args){
   
 }
 
-void applyRedirection(const ParsedCommand& cmd) {
+bool applyRedirection(const ParsedCommand& cmd) {
   if (!cmd.inputFile.empty()) {
     int fd = open(cmd.inputFile.c_str(), O_RDONLY);
     if (fd < 0) {
       perror("Failed to open input file");
-      _exit(1);
+      return false;
     }
     dup2(fd, STDIN_FILENO);
     close(fd);
@@ -293,11 +293,12 @@ void applyRedirection(const ParsedCommand& cmd) {
     int fd = open(cmd.outputFile.c_str(), flags, 0644);
     if (fd < 0) {
       perror("Failed to open output file");
-      _exit(1);
+      return false;
     }
     dup2(fd, STDOUT_FILENO);
     close(fd);
   }
+  return true;
 }
 
 bool handleExternalProgram(const ParsedCommand& cmd, const std::string& path) {
