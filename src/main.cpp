@@ -237,19 +237,25 @@ bool isBuiltIn(const std::string& s) {
   return std::find(builtInCommands.begin(), builtInCommands.end(), s) != builtInCommands.end();
 }
 
-void handleType(const std::vector<std::string>& args){
-  if (!args.empty()) {
-    if (isBuiltIn(args[0])) {
-      std::cout << args[0] << " is a shell builtin\n";
-    } else if (std::string path = findExecutablePath(args[0]); !path.empty()) {
-      std::cout << args[0] << " is " << path << "\n";
-    } else {
-      std::cout << args[0] << ": not found\n";
-    }
+bool handleType(const std::vector<std::string>& args){
+  if (!args.empty()) {return true;}
+  if (isBuiltIn(args[0])) {
+    std::cout << args[0] << " is a shell builtin\n";
+    return true;
   }
+
+  std::string path = findExecutablePath(args[0]);
+  if (!path.empty()) {
+    std::cout << args[0] << " is " << path << "\n";
+    return true;
+  }
+
+  std::cout << args[0] << ": not found\n";
+  return false;
+
 }
 
-void handleEcho(const std::vector<std::string>& args){
+bool handleEcho(const std::vector<std::string>& args){
 
   std::string output = "";
 
@@ -260,6 +266,7 @@ void handleEcho(const std::vector<std::string>& args){
     }
   }
   std::cout << output << "\n";
+  return true;
 }
 
 bool handleCd(const std::vector<std::string>& args){
@@ -429,12 +436,10 @@ bool executeSignle(const ParsedCommand& cmd) {
 
     bool success = false;
     if (applyRedirection(cmd)) {
-      if (cmd.command == "type") {
-        handleType(cmd.arguments); 
-        success = true;
+      if (cmd.command == "type") { 
+        success = handleType(cmd.arguments);
       } else if (cmd.command == "echo") {
-        handleEcho(cmd.arguments);
-        success = true;
+        success = handleEcho(cmd.arguments);
       } else if (cmd.command == "cd") {
         success = handleCd(cmd.arguments);
       }
