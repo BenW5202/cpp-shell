@@ -425,7 +425,7 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
   return true;
 }
 
-bool executeSignle(const ParsedCommand& cmd) {
+bool executeSingle(const ParsedCommand& cmd) {
   if (cmd.command == "exit") {
     exit(0);
   }
@@ -459,6 +459,17 @@ bool executeSignle(const ParsedCommand& cmd) {
     std::cout << cmd.command << ": command not found\n";
     return false; 
   }
+}
+
+bool executeBlock(const std::vector<ParsedCommand>& block) {
+  if (block.empty()) {
+    return true;
+  }
+  if (block.size() == 1) {
+    return executeSingle(block[0]);
+  }
+
+  return handlePipeline(block);
 }
 int main() {
   // Flush after every std::cout / std:cerr
