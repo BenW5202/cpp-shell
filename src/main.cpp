@@ -229,6 +229,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
   if (!currentCmd.command.empty()) {
     commands.push_back(currentCmd);
   }
+  return true;
 }
 
 bool isBuiltIn(const std::string& s) {
