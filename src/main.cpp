@@ -262,7 +262,7 @@ void handleEcho(const std::vector<std::string>& args){
   std::cout << output << "\n";
 }
 
-void handleCd(const std::vector<std::string>& args){
+bool handleCd(const std::vector<std::string>& args){
 
   const char* path;
 
@@ -274,8 +274,9 @@ void handleCd(const std::vector<std::string>& args){
 
   if (chdir(path) == -1){
     std::cerr << "ERROR: no such file or directory with path " << path << "\n";
+    return false;
   }
-  
+  return true;
 }
 
 bool applyRedirection(const ParsedCommand& cmd) {
