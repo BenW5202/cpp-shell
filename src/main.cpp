@@ -11,6 +11,7 @@
 #include <csignal>
 #include <algorithm>
 #include <fcntl.h>
+#include <cstring>
 
 constexpr char PATH_LIST_SEPARATOR = ':';
 
@@ -76,10 +77,10 @@ std::string getPrompt() {
   char cwd[1024];
   std::string cwdStr = "";
   if (getcwd(cwd, sizeof(cwd))) {
-    cwdStr = cwd
+    cwdStr = cwd;
   }
 
-  const char* homme = std::getenv("HOME");
+  const char* home = std::getenv("HOME");
   if (home && cwdStr.find(home) == 0) {
     cwdStr.replace(0, std::strlen(home), "~");
   }
