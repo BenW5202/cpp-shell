@@ -63,6 +63,29 @@ std::string findExecutablePath(const std::string& command) {
   return findExecutablePath(command, splitPath(getPathEnv()));
 }
 
+std::string getPrompt() {
+  const char* user = std::getenv("USER");
+  std::string userStr = user ?  user : "user";
+
+  char host[256];
+  std::string hostStr = "host";
+  if (gethostname(host, sizeof(host)) == 0) {
+    hostStr = host;
+  }
+
+  char cwd[1024];
+  std::string cwdStr = "";
+  if (getcwd(cwd, sizeof(cwd))) {
+    cwdStr = cwd
+  }
+
+  const char* homme = std::getenv("HOME");
+  if (home && cwdStr.find(home) == 0) {
+    cwdStr.replace(0, std::strlen(home), "~");
+  }
+
+  return "\033[1;32m" + userStr + "@" + hostStr + "\033[0m:\033[1;34m" + cwdStr + "\033[0m$ ";
+}
 enum class Connector {
   NONE,
   PIPE, // |
@@ -86,7 +109,8 @@ struct ParsedCommand {
 bool getData(std::vector<ParsedCommand>& commands) {
   
   commands.clear();
-  std::cout << "$ ";
+  std::cout << getPrompt();
+  
   std::string input;
 
   if (!std::getline(std::cin, input)) {
