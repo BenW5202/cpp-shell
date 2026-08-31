@@ -489,33 +489,48 @@ int main() {
     if (commands.empty()) {
       continue;
     }
-    if (commands.size() == 1){
-      const ParsedCommand& cmd = commands[0];
-      std::string command = cmd.command;
-      std::vector<std::string> args = cmd.arguments;
-      if (command == "exit") {
-      break;
-      } else if (command == "type") {
-        handleType(args);
-      } else if (command == "echo") {
-        handleEcho(args);
-      } else if (command == "cd") {
-        handleCd(args);
-      } else if (!(isBuiltIn(command))){
-        if(std::string path = findExecutablePath(command); !path.empty()){
-          //Execute the program
-          if (!handleExternalProgram(cmd, path)){
-            std::cerr << "ERROR: Failed to execute the program" << "\n";
-          }
-        } else {
-          std::cout << command << ": command not found" << "\n";
+    size_t i = 0;
+    bool last_status_success = true;
+
+    while (i < commands.size()) {
+      std::vector<ParsedCommand> block;
+      
+      while (i < commands.size()) {
+        block.push_back(commands[i]);
+        Connector c = commands[i].connector;
+        i++;
+        if (c != Connector::PIPE){
+          break;
         }
       }
-    } else if (commands.size() > 1) {
-      //pipe logic
-      handlePipeline(commands);
+
+      Connector trailing_conn = block.back().connector;
+
+      last_status_success = executeBlock(block);
+
+      while (i < commands.size()) {
+        if (trailing_conn == Connector::AND && !last_status_success) {
+
+        } else if (trailing_conn == Connector::OR && last_status_success) {
+
+        } else {
+          break;
+        }
+
+        std::vector<ParsedCommand> skipped_block;
+        while (i < commands.size()) {
+          skipped_block.push_back(commands[i]);
+          Connector c = commands[i].connector;
+          i++;
+          if (c != Connector::PIPE){
+            break;
+          }
+          trailing_conn = skipped_block.back().connector;
+        }
+      }
     }
   }
+  return 0;
 }
   
 
