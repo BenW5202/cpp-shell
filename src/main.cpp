@@ -95,6 +95,7 @@ std::string getPrompt() {
 
   return "\033[1;32m" + userStr + "@" + hostStr + "\033[0m:\033[1;34m" + cwdStr + "\033[0m$ ";
 }
+
 enum class Connector {
   NONE,
   PIPE, // |
@@ -313,6 +314,7 @@ bool handleHistory() {
   }
   return true;
 }
+
 bool handleCd(const std::vector<std::string>& args){
 
   const char* path;
@@ -536,6 +538,7 @@ bool executeBlock(const std::vector<ParsedCommand>& block, bool runInBackground)
 
   return handlePipeline(block, runInBackground);
 }
+
 int main() {
   // Flush after every std::cout / std:cerr
   std::cout << std::unitbuf;
@@ -603,6 +606,3 @@ int main() {
   }
   return 0;
 }
-  
-
- 
