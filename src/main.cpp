@@ -17,6 +17,12 @@ constexpr char PATH_LIST_SEPARATOR = ':';
 
 std::vector<std::string> commandHistory;
 
+void sigchld_handler(int signo) {
+  (void)signo;
+
+  while (waitpid(-1, nullptr, WNOHANG) > 0) {}
+}
+
 std::string getPathEnv() {
   const char* pathVal = std::getenv("PATH");
   return pathVal ? pathVal : "";
@@ -347,7 +353,7 @@ bool applyRedirection(const ParsedCommand& cmd) {
   return true;
 }
 
-bool handleExternalProgram(const ParsedCommand& cmd, const std::string& path) {
+bool handleExternalProgram(const ParsedCommand& cmd, const std::string& path, bool runInBackground) {
   std::vector<const char*> vecOfPtrs;
 
   vecOfPtrs.push_back(cmd.command.c_str());
@@ -364,25 +370,28 @@ bool handleExternalProgram(const ParsedCommand& cmd, const std::string& path) {
     return false;
   } else if (pid == 0) { //child process
     std::signal(SIGINT, SIG_DFL);
-    applyRedirection(cmd);
+    if(!applyRedirection(cmd)) {_exit(1);}
     execv(path.c_str(), const_cast<char**>(vecOfPtrs.data()));
     std::cerr << "ERROR: child process failed\n";
     _exit(1);
   } else { //parent process
+    
+    if (runInBackground) {
+      std::cout << "[1] " << pid << "\n";
+      return true;
+    }
+
     int status;
     waitpid(pid, &status, 0);
 
-    if (WIFEXITED(status) and WEXITSTATUS(status) == 0)  {
-      return true;
-    } else {
-      return false;
-    }
+    return (WIFEXITED(status) and WEXITSTATUS(status) == 0);  
   }
 }
 
-bool handlePipeline(const std::vector<ParsedCommand>& commands){
+bool handlePipeline(const std::vector<ParsedCommand>& commands, bool runInBackground){
   
   int prev_fd = -1;
+  pid_t last_pid = -1;
 
   for (size_t i = 0; i < commands.size(); ++i) {
     int pipefd[2];
@@ -406,7 +415,7 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
         close(pipefd[1]);
       }
 
-      applyRedirection(commands[i]);
+      if (!applyRedirection(commands[i])) {_exit(1);}
       std::signal(SIGINT, SIG_DFL);
 
       
@@ -450,6 +459,7 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
       _exit(1);
 
     } else {
+      last_pid = pid;
       if (prev_fd != -1) {
         close(prev_fd);
       }
@@ -459,13 +469,25 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
       }
     }    
   }
-  while (waitpid(-1, NULL, 0) > 0) {
 
+  if (runInBackground) {
+    std::cout << "[1] " << last_pid << "\n";
+    return true;
   }
-  return true;
+  
+  int status;
+  int last_status = 0;
+  pid_t wpid;
+  while ((wpid = waitpid(-1, &status, 0)) > 0) {
+    if (wpid == last_pid) {
+      last_status = status;
+    }
+  }
+
+  return (WIFEXITED(last_status) && WEXITSTATUS(last_status) == 0);
 }
 
-bool executeSingle(const ParsedCommand& cmd) {
+bool executeSingle(const ParsedCommand& cmd, bool runInBackground) {
   if (cmd.command == "exit") {
     exit(0);
   }
@@ -497,22 +519,22 @@ bool executeSingle(const ParsedCommand& cmd) {
 
   std::string path = findExecutablePath(cmd.command);
   if (!path.empty()) {
-    return handleExternalProgram(cmd, path);
+    return handleExternalProgram(cmd, path, runInBackground);
   } else {
     std::cout << cmd.command << ": command not found\n";
     return false; 
   }
 }
 
-bool executeBlock(const std::vector<ParsedCommand>& block) {
+bool executeBlock(const std::vector<ParsedCommand>& block, bool runInBackground) {
   if (block.empty()) {
     return true;
   }
   if (block.size() == 1) {
-    return executeSingle(block[0]);
+    return executeSingle(block[0], runInBackground);
   }
 
-  return handlePipeline(block);
+  return handlePipeline(block, runInBackground);
 }
 int main() {
   // Flush after every std::cout / std:cerr
@@ -521,6 +543,12 @@ int main() {
 
   //to prevent ctrl+c from terminating shell
   std::signal(SIGINT, SIG_IGN); 
+
+  struct sigaction sa;
+  sa.sa_handler = sigchld_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+  sigaction(SIGCHLD, &sa, nullptr);
 
   while (true){ 
     std::vector<ParsedCommand> commands;
@@ -547,8 +575,9 @@ int main() {
       }
 
       Connector trailing_conn = block.back().connector;
+      bool runInBackground = (trailing_conn == Connector::BACKGROUND);
 
-      last_status_success = executeBlock(block);
+      last_status_success = executeBlock(block, runInBackground);
 
       while (i < commands.size()) {
         if (trailing_conn == Connector::AND && !last_status_success) {
@@ -567,8 +596,8 @@ int main() {
           if (c != Connector::PIPE){
             break;
           }
-          trailing_conn = skipped_block.back().connector;
         }
+        trailing_conn = skipped_block.back().connector;
       }
     }
   }
