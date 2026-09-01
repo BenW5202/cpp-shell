@@ -15,6 +15,8 @@
 
 constexpr char PATH_LIST_SEPARATOR = ':';
 
+std::vector<std::string> commandHistory;
+
 std::string getPathEnv() {
   const char* pathVal = std::getenv("PATH");
   return pathVal ? pathVal : "";
@@ -118,6 +120,10 @@ bool getData(std::vector<ParsedCommand>& commands) {
     return false;
   }
 
+
+  if (!input.empty()) {
+    commandHistory.push_back(input);
+  }
   //Tokenization
   std::vector<std::string> tokens;
   std::string currentToken;
@@ -258,7 +264,7 @@ bool getData(std::vector<ParsedCommand>& commands) {
 }
 
 bool isBuiltIn(const std::string& s) {
-  static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type", "cd"};
+  static const std::unordered_set<std::string> builtInCommands = {"echo", "exit", "type", "cd", "history"};
 
   return std::find(builtInCommands.begin(), builtInCommands.end(), s) != builtInCommands.end();
 }
@@ -295,6 +301,12 @@ bool handleEcho(const std::vector<std::string>& args){
   return true;
 }
 
+bool handleHistory() {
+  for (size_t i = 0; i < commandHistory.size(); ++i) {
+    std::cout << " " << (i + 1) << " " << commandHistory[i] << "\n";
+  }
+  return true;
+}
 bool handleCd(const std::vector<std::string>& args){
 
   const char* path;
@@ -408,6 +420,8 @@ bool handlePipeline(const std::vector<ParsedCommand>& commands){
           handleType(args);
         } else if (command == "cd") {
           handleCd(args);
+        } else if (command == "history") {
+          handleHistory();
         } else if (command == "exit") {
           _exit(0);
         }
@@ -466,7 +480,10 @@ bool executeSingle(const ParsedCommand& cmd) {
         success = handleType(cmd.arguments);
       } else if (cmd.command == "echo") {
         success = handleEcho(cmd.arguments);
-      } else if (cmd.command == "cd") {
+      } else if (cmd.command == "history") {
+        success = handleHistory(); 
+      }
+      else if (cmd.command == "cd") {
         success = handleCd(cmd.arguments);
       }
     }
